@@ -64,12 +64,12 @@ const start = async () => {
         onlineUsers.add(socket.id);
         io.emit('onlineUsers', Array.from(onlineUsers));
       });
-      
+
       socket.on('disconnect', () => {
         onlineUsers.delete(socket.id);
         io.emit('onlineUsers', Array.from(onlineUsers));
       });
-      
+
       socket.on('message', (message) => {
         const rooms = Array.from(socket.rooms);
         const currentRoomId = rooms.find(room => room !== socket.id);
@@ -83,6 +83,17 @@ const start = async () => {
         } else {
           console.error('No room ID found for the socket.');
         }
+      });
+      const messageCounter = new Map();
+
+      socket.on('message', (message) => {
+        const count = messageCounter.get(socket.id) || 0;
+        if (count > 10) { // 10 messages per minute
+          socket.emit('error', { message: 'Too many messages' });
+          return;
+        }
+        messageCounter.set(socket.id, count + 1);
+        setTimeout(() => messageCounter.set(socket.id, 0), 60000);
       });
 
       socket.on('disconnect', () => {
