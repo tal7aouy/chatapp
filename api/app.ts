@@ -48,6 +48,16 @@ const start = async () => {
         socket.data.user = userData;
         socket.emit('authenticated', { status: 'success' });
       });
+      socket.on('createRoom', (roomName) => {
+        const roomId = uuidv4();
+        socket.join(roomId);
+        io.emit('roomCreated', { roomId, roomName });
+      });
+
+      socket.on('leaveRoom', (roomId) => {
+        socket.leave(roomId);
+        socket.to(roomId).emit('userLeft', socket.data.user);
+      });
 
       socket.on('message', (message) => {
         const rooms = Array.from(socket.rooms);
