@@ -58,7 +58,18 @@ const start = async () => {
         socket.leave(roomId);
         socket.to(roomId).emit('userLeft', socket.data.user);
       });
+      const onlineUsers = new Set();
 
+      socket.on('connect', () => {
+        onlineUsers.add(socket.id);
+        io.emit('onlineUsers', Array.from(onlineUsers));
+      });
+      
+      socket.on('disconnect', () => {
+        onlineUsers.delete(socket.id);
+        io.emit('onlineUsers', Array.from(onlineUsers));
+      });
+      
       socket.on('message', (message) => {
         const rooms = Array.from(socket.rooms);
         const currentRoomId = rooms.find(room => room !== socket.id);
