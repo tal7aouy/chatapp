@@ -2,7 +2,7 @@ import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import { Server } from "socket.io";
 import ip from 'ip';
-import { v4 as uuidv4 } from 'uuid'; 
+import { v4 as uuidv4 } from 'uuid';
 import chatRoutes from "./routes/chatRoutes";
 
 const fastify: FastifyInstance = Fastify({
@@ -44,13 +44,17 @@ const start = async () => {
         socket.join(roomId);
         console.log(`User joined room: ${roomId}`);
       });
+      socket.on('authenticate', (userData) => {
+        socket.data.user = userData;
+        socket.emit('authenticated', { status: 'success' });
+      });
 
       socket.on('message', (message) => {
         const rooms = Array.from(socket.rooms);
         const currentRoomId = rooms.find(room => room !== socket.id);
 
         if (currentRoomId) {
-          io.to(currentRoomId).emit('message', { 
+          io.to(currentRoomId).emit('message', {
             timestamp: new Date().toISOString(),
             data: message,
             senderId: socket.id
