@@ -70,31 +70,38 @@ const start = async () => {
         io.emit('onlineUsers', Array.from(onlineUsers));
       });
 
-      socket.on('message', (message) => {
+     socket.on('message', (message) => {
         const rooms = Array.from(socket.rooms);
         const currentRoomId = rooms.find(room => room !== socket.id);
 
         if (currentRoomId) {
-          io.to(currentRoomId).emit('message', {
+          const messageData = {
             timestamp: new Date().toISOString(),
             data: message,
-            senderId: socket.id
-          });
+            senderId: socket.id,
+            senderInfo: socket.data.user,
+            isOwnMessage: false
+          };
+
+          socket.emit('message', { ...messageData, isOwnMessage: true });
+          
+          socket.to(currentRoomId).emit('message', messageData);
         } else {
           console.error('No room ID found for the socket.');
         }
       });
-      const messageCounter = new Map();
 
-      socket.on('message', (message) => {
-        const count = messageCounter.get(socket.id) || 0;
+      const messageCounter = new Map();
+      
+      const checkMessageLimit = (socketId: string): boolean => {
+        const count = messageCounter.get(socketId) || 0;
         if (count > 10) { // 10 messages per minute
-          socket.emit('error', { message: 'Too many messages' });
-          return;
+          return false;
         }
-        messageCounter.set(socket.id, count + 1);
-        setTimeout(() => messageCounter.set(socket.id, 0), 60000);
-      });
+        messageCounter.set(socketId, count + 1);
+        setTimeout(() => messageCounter.set(socketId, 0), 60000);
+        return true;
+      };
 
       socket.on('disconnect', () => {
         console.log('Socket.io connection closed');
